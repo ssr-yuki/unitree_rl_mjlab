@@ -139,29 +139,45 @@ G1_ACTUATOR_5020 = BuiltinPositionActuatorCfg(
     ".*_shoulder_yaw_joint",
     ".*_wrist_roll_joint",
   ),
-  stiffness=STIFFNESS_5020,
-  damping=DAMPING_5020,
+  stiffness=40.0,
+  damping=1.0,
   effort_limit=ACTUATOR_5020.effort_limit,
   armature=ACTUATOR_5020.reflected_inertia,
 )
-G1_ACTUATOR_7520_14 = BuiltinPositionActuatorCfg(
-  target_names_expr=(".*_hip_pitch_joint", ".*_hip_yaw_joint", "waist_yaw_joint"),
-  stiffness=STIFFNESS_7520_14,
-  damping=DAMPING_7520_14,
+G1_ACTUATOR_7520_14_HIP = BuiltinPositionActuatorCfg(
+  target_names_expr=(".*_hip_pitch_joint", ".*_hip_yaw_joint"),
+  stiffness=100.0,
+  damping=2.0,
   effort_limit=ACTUATOR_7520_14.effort_limit,
   armature=ACTUATOR_7520_14.reflected_inertia,
 )
-G1_ACTUATOR_7520_22 = BuiltinPositionActuatorCfg(
-  target_names_expr=(".*_hip_roll_joint", ".*_knee_joint"),
-  stiffness=STIFFNESS_7520_22,
-  damping=DAMPING_7520_22,
+G1_ACTUATOR_7520_14_WAIST = BuiltinPositionActuatorCfg(
+  target_names_expr=("waist_yaw_joint",),
+  stiffness= 200.0,
+  damping=5.0,
+  effort_limit=ACTUATOR_7520_14.effort_limit,
+  armature=ACTUATOR_7520_14.reflected_inertia,
+)
+
+G1_ACTUATOR_7520_22_HIP = BuiltinPositionActuatorCfg(
+  target_names_expr=(".*_hip_roll_joint",),
+  stiffness=100.0,
+  damping=2.0,
   effort_limit=ACTUATOR_7520_22.effort_limit,
   armature=ACTUATOR_7520_22.reflected_inertia,
 )
+G1_ACTUATOR_7520_22_KNEE = BuiltinPositionActuatorCfg(
+  target_names_expr=(".*_knee_joint",),
+  stiffness=150.0,
+  damping=4.0,
+  effort_limit=ACTUATOR_7520_22.effort_limit,
+  armature=ACTUATOR_7520_22.reflected_inertia,
+)
+
 G1_ACTUATOR_4010 = BuiltinPositionActuatorCfg(
   target_names_expr=(".*_wrist_pitch_joint", ".*_wrist_yaw_joint"),
-  stiffness=STIFFNESS_4010,
-  damping=DAMPING_4010,
+  stiffness=40.0,
+  damping=1.0,
   effort_limit=ACTUATOR_4010.effort_limit,
   armature=ACTUATOR_4010.reflected_inertia,
 )
@@ -173,15 +189,15 @@ G1_ACTUATOR_4010 = BuiltinPositionActuatorCfg(
 # nominal configuration is approximated as the sum of the 2 actuators' armatures.
 G1_ACTUATOR_WAIST = BuiltinPositionActuatorCfg(
   target_names_expr=("waist_pitch_joint", "waist_roll_joint"),
-  stiffness=STIFFNESS_5020 * 2,
-  damping=DAMPING_5020 * 2,
+  stiffness=40.0,
+  damping=5.0,
   effort_limit=ACTUATOR_5020.effort_limit * 2,
   armature=ACTUATOR_5020.reflected_inertia * 2,
 )
 G1_ACTUATOR_ANKLE = BuiltinPositionActuatorCfg(
   target_names_expr=(".*_ankle_pitch_joint", ".*_ankle_roll_joint"),
-  stiffness=STIFFNESS_5020 * 2,
-  damping=DAMPING_5020 * 2,
+  stiffness=40.0,
+  damping=2.0,
   effort_limit=ACTUATOR_5020.effort_limit * 2,
   armature=ACTUATOR_5020.reflected_inertia * 2,
 )
@@ -260,8 +276,10 @@ FEET_ONLY_COLLISION = CollisionCfg(
 G1_ARTICULATION = EntityArticulationInfoCfg(
   actuators=(
     G1_ACTUATOR_5020,
-    G1_ACTUATOR_7520_14,
-    G1_ACTUATOR_7520_22,
+    G1_ACTUATOR_7520_14_HIP,
+    G1_ACTUATOR_7520_14_WAIST,
+    G1_ACTUATOR_7520_22_HIP,
+    G1_ACTUATOR_7520_22_KNEE,
     G1_ACTUATOR_4010,
     G1_ACTUATOR_WAIST,
     G1_ACTUATOR_ANKLE,
@@ -290,9 +308,14 @@ for a in G1_ARTICULATION.actuators:
   e = a.effort_limit
   s = a.stiffness
   names = a.target_names_expr
-  assert e is not None
+
+  if not isinstance(e, dict):
+    e = {n: e for n in names}
+  if not isinstance(s, dict):
+    s = {n: s for n in names}
   for n in names:
-    G1_ACTION_SCALE[n] = 0.25 * e / s
+    if n in e and n in s and s[n]:
+      G1_ACTION_SCALE[n] = 0.25 * e[n] / s[n]
 
 
 if __name__ == "__main__":
